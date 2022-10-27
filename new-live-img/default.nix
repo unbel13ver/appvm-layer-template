@@ -6,33 +6,19 @@ let
   inherit (config) pkgs;
   spectrum = import ../../spectrum/release/live { };
   kernel = spectrum.rootfs.kernel;
-  customer-vms = pkgs.callPackage ./custom-vms.nix { inherit config; };
+  appvm-user = pkgs.callPackage ../user-app-vm/default.nix { inherit config; };
+  myextpart = with pkgs; runCommand "myext.ext4" {
+    nativeBuildInputs = [ e2tools e2fsprogs util-linux p7zip tar2ext4 ];
+  } ''
+    7z x ${spectrum.EXT_FS}
+    cp -r ${appvm-user}/data svc/
+    tar -cf ext.tar svc
+    tar2ext4 -i ext.tar -o $out
+  '';
 in
 
 with pkgs;
 
-stdenvNoCC.mkDerivation {
-  pname = "new-spectrum-live.img";
-  version = "0.2";
-
-  unpackPhase = "true";
-
-  nativeBuildInputs = [
-    pkgsBuildHost.util-linux
-    pkgsBuildHost.jq
-    pkgsBuildHost.mtools
-  ];
-
-  buildCommand = ''
-    install -m 0644 ${spectrum} $pname
-    # Append ~0.5 Gb of space to the image 
-    dd if=/dev/zero bs=1M count=500 >> $pname
-    dd if=${customer-vms} of=$pname seek=$(expr $(fdisk -l $pname | tail -n 1 |  awk '{print $3}') + 1) conv=notrunc
-    echo "n
-
-
-
-    w" | fdisk $pname
-    cp $pname $out
-  '';
-}
+spectrum.overrideDerivation (oldAttrs: {
+  EXT_FS = myextpart;
+})
