@@ -4,12 +4,12 @@
 
 { config }:
 
-import ../../spectrum/vm/make-vm.nix { inherit config; } {
+import ../../spectrum/vm-lib/make-vm.nix { inherit config; } {
     name = "appvm-user";
-    run = config.pkgs.pkgsStatic.callPackage (
-      { writeShellScript, coreutils }:
-      writeShellScript "appvm-yes-run" ''
-        ${coreutils}/bin/yes
+    run = config.pkgs.callPackage (
+      { writeShellScript, chromium }:
+      writeShellScript "appvm-chromium-run" ''
+        ${chromium}/bin/chromium  --enable-features=UseOzonePlatform --ozone-platform=wayland --no-sandbox
       ''
     ) {};
 }
