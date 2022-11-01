@@ -12,7 +12,7 @@ let
     nativeBuildInputs = [ e2tools e2fsprogs util-linux p7zip tar2ext4 ];
   } ''
     7z x ${spectrum.EXT_FS}
-    cp -r ${appvm-user} svc/data/appvm-user
+    cp -r ${appvm-user}/data/appvm-user svc/data/
     tar -cf ext.tar svc
     tar2ext4 -i ext.tar -o $out
   '';
@@ -22,9 +22,9 @@ with pkgs;
 
 spectrum.overrideDerivation (oldAttrs: {
   EXT_FS = myextpart;
-  pname = "temp.img";
-  buildCommand = ''
-    install -m 0644 ${spectrum} $pname
+  pname = "build/live.img";
+  installPhase = ''
+    runHook preInstall
     dd if=/dev/zero bs=1M count=6 >> $pname
     partnum=$(sfdisk --json $pname | grep "node" | wc -l)
     while [ $partnum -gt 0 ]; do
@@ -42,5 +42,6 @@ spectrum.overrideDerivation (oldAttrs: {
     mcopy -no -i $pname@@$ESP_OFFSET ${kernel}/dtbs/freescale/imx8qm-mek-hdmi.dtb ::/
     mcopy -no -i $pname@@$ESP_OFFSET ${config.pkgs.imx-firmware}/hdmitxfw.bin ::/
     mv $pname $out
+    runHook postInstall
   '';
 })
