@@ -3,7 +3,7 @@
     overlays = [
       (self: super:
         {
-          linux_latest = super.linuxKernel.kernels.linux_imx8.override {
+          linux_imx8 = super.linuxKernel.kernels.linux_imx8.override {
             structuredExtraConfig = with self.lib.kernel; {
               ATA_PIIX = yes;
               EFI_STUB = yes;
