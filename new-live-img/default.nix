@@ -4,7 +4,7 @@
 
 let
   inherit (config) pkgs;
-  uboot = pkgs.ubootIMX8QM;
+  uboot = pkgs.callPackage ./bsp/imx8qm/imx-uboot.nix { inherit pkgs; };
   spectrum = import ../../spectrum/release/live { };
   kernel = spectrum.rootfs.kernel;
   appvm-user = pkgs.callPackage ../user-app-vm/default.nix { inherit config; };
