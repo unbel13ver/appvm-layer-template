@@ -9,12 +9,14 @@ let
   kernel = spectrum.rootfs.kernel;
   appvm-user = pkgs.callPackage ../user-app-vm/default.nix { inherit config; };
   myextpart = with pkgs; runCommand "myext.ext4" {
-    nativeBuildInputs = [ e2tools e2fsprogs util-linux p7zip tar2ext4 ];
+    nativeBuildInputs = [ e2tools e2fsprogs util-linux tar2ext4 libguestfs-with-appliance ];
   } ''
-    7z x ${spectrum.EXT_FS}
-    cp -r ${appvm-user}/data/appvm-user svc/data/
-    tar -cf ext.tar svc
-    tar2ext4 -i ext.tar -o $out
+    cp ${spectrum.EXT_FS} myext.ext4
+    mkdir mp
+    ${libguestfs-with-appliance}/bin/guestmount -a myext.ext4 -m /dev/sda --rw ./mp
+    tar -C ${appvm-user} -c data | tar -C mp/svc -x
+    ${libguestfs-with-appliance}/bin/guestunmount mp
+    mv myext.ext4 $out
   '';
 in
 
