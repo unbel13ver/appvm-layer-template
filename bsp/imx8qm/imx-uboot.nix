@@ -22,7 +22,7 @@ in {
     copyBinaries = ''
       install -m 0644 ${imx-firmware}/mx8qmb0-ahab-container.img ./ahab-container.img
       install -m 0644 ${imx-firmware}/mx8qm-mek-scfw-tcm.bin ./mx8qm-mek-scfw-tcm.bin
-      install -m 0644 ${BL31} ./u-boot-atf.bin      
+      install -m 0644 ${BL31} ./u-boot-atf.bin
     '';
     postBuild = ''
       ${pkgs.buildPackages.imx-mkimage}/bin/mkimage_imx8 -commit > head.hash

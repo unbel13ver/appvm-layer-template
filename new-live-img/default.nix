@@ -4,22 +4,35 @@
 
 let
   inherit (config) pkgs;
-  uboot = pkgs.callPackage ./bsp/imx8qm/imx-uboot.nix { inherit pkgs; };
+  uboot = pkgs.callPackage ../bsp/imx8qm/imx-uboot.nix { inherit pkgs; };
   spectrum = import ../../spectrum/release/live { };
   kernel = spectrum.rootfs.kernel;
   appvm-user = pkgs.callPackage ../user-app-vm/default.nix { inherit config; };
-  myextpart = with pkgs; runCommand "myext.ext4" {
-    nativeBuildInputs = [ e2tools e2fsprogs util-linux tar2ext4 libguestfs-with-appliance ];
-  } ''
-    cp ${spectrum.EXT_FS} myext.ext4
-    mkdir mp
-    ${libguestfs-with-appliance}/bin/guestmount -a myext.ext4 -m /dev/sda --rw ./mp
-    tar -C ${appvm-user} -c data | tar -C mp/svc -x
-    ${libguestfs-with-appliance}/bin/guestunmount mp
-    mv myext.ext4 $out
-  '';
-in
 
+  myextpart = with pkgs; vmTools.runInLinuxVM (
+    stdenv.mkDerivation {
+      name = "myextpart";
+      nativeBuildInputs = [ e2fsprogs util-linux ];
+      buildCommand = ''
+	ln -s ${kernel}/lib /lib
+        ${kmod}/bin/modprobe loop
+        ${kmod}/bin/modprobe ext4
+        cd /tmp/xchg
+        install -m 0644 ${spectrum.EXT_FS} user-ext.ext4
+	spaceInMiB=$(du -sB M ${appvm-user} | awk '{ print substr( $1, 1, length($1)-1 ) }')
+	dd if=/dev/zero bs=1M count=$(expr $spaceInMiB + 50) >> user-ext.ext4
+        resize2fs -p user-ext.ext4
+        tune2fs -O ^read-only user-ext.ext4
+	mkdir mp
+	mount -o loop,rw user-ext.ext4 mp
+        mkdir -p mp/svc/data/appvm-external
+        tar -C ${appvm-user} -c . | tar -C mp/svc/data/appvm-external -x
+        umount mp
+        tune2fs -O read-only user-ext.ext4
+        cp user-ext.ext4 $out
+      '';
+    });
+in
 with pkgs;
 
 spectrum.overrideDerivation (oldAttrs: {
@@ -33,7 +46,7 @@ spectrum.overrideDerivation (oldAttrs: {
       echo '+6M,' | sfdisk --move-data $pname -N $partnum
       partnum=$((partnum-1))
     done
-    dd if=${uboot}/flash.bin of=$pname bs=1k seek=32 conv=notrunc
+    dd if=$uboot/flash.bin of=$pname bs=1k seek=32 conv=notrunc
     IMG=$pname
     ESP_OFFSET=$(sfdisk --json $IMG | jq -r '
       # Partition type GUID identifying EFI System Partitions
@@ -41,7 +54,6 @@ spectrum.overrideDerivation (oldAttrs: {
       .partitiontable |
       .sectorsize * (.partitions[] | select(.type == ESP_GUID) | .start)
     ')
-    mcopy -no -i $pname@@$ESP_OFFSET ${kernel}/dtbs/freescale/imx8qm-mek-hdmi.dtb ::/
     mcopy -no -i $pname@@$ESP_OFFSET ${config.pkgs.imx-firmware}/hdmitxfw.bin ::/
     mv $pname $out
     runHook postInstall
