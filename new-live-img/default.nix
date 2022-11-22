@@ -4,9 +4,9 @@
 
 let
   inherit (config) pkgs;
-  uboot = pkgs.callPackage ../bsp/imx8qm/imx-uboot.nix { inherit pkgs; };
+  inherit ( pkgs.callPackage ../bsp/imx8qm/imx-uboot.nix { inherit pkgs; }) ubootImx8;
   spectrum = import ../../spectrum/release/live { };
-  kernel = spectrum.rootfs.kernel;
+  kernel = pkgs.linux_latest;
   appvm-user = pkgs.callPackage ../user-app-vm/default.nix { inherit config; };
 
   myextpart = with pkgs; vmTools.runInLinuxVM (
@@ -37,6 +37,7 @@ with pkgs;
 
 spectrum.overrideDerivation (oldAttrs: {
   EXT_FS = myextpart;
+  KERNEL = linux_imx8;
   pname = "build/live.img";
   installPhase = ''
     runHook preInstall
@@ -46,7 +47,7 @@ spectrum.overrideDerivation (oldAttrs: {
       echo '+6M,' | sfdisk --move-data $pname -N $partnum
       partnum=$((partnum-1))
     done
-    dd if=$uboot/flash.bin of=$pname bs=1k seek=32 conv=notrunc
+    dd if=${ubootImx8}/flash.bin of=$pname bs=1k seek=32 conv=notrunc
     IMG=$pname
     ESP_OFFSET=$(sfdisk --json $IMG | jq -r '
       # Partition type GUID identifying EFI System Partitions
@@ -54,6 +55,7 @@ spectrum.overrideDerivation (oldAttrs: {
       .partitiontable |
       .sectorsize * (.partitions[] | select(.type == ESP_GUID) | .start)
     ')
+    mcopy -no -i $pname@@$ESP_OFFSET $KERNEL/dtbs/freescale/imx8qm-mek-hdmi.dtb ::/
     mcopy -no -i $pname@@$ESP_OFFSET ${config.pkgs.imx-firmware}/hdmitxfw.bin ::/
     mv $pname $out
     runHook postInstall
