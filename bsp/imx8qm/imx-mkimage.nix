@@ -8,7 +8,7 @@ pkgs.stdenv.mkDerivation rec {
   src = fetchgit {
     url = "https://source.codeaurora.org/external/imx/imx-mkimage.git";
     rev = version;
-    sha256 = "sha256-9buTYj0NdKV9CpzHfj7sIB5sRzS4Md48pn2joy+T97U=";
+    sha256 = "sha256-31pib5DTDPVfiAAoOSzK8HWUlnuiNnfXQIsxbjneMCc=";
     leaveDotGit = true;
   };
 

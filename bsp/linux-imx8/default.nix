@@ -34,7 +34,7 @@ buildLinux (args // rec {
     VIRTIO_BLK y
     DRM_VIRTIO_GPU y
     EXT4_FS y
-    USBIP_CORE = module ;
+    USBIP_CORE m
     USBIP_VHCI_HCD m
     USBIP_HOST m
     USBIP_VUDC m

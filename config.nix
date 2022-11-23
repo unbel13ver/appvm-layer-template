@@ -2,6 +2,7 @@
   pkgs = import <nixpkgs> {
     system = "aarch64-linux";
     overlays = [
+      (import ./overlays)
       (self: super:
         {
           #linux_imx8 = super.linux_rpi4.override {
