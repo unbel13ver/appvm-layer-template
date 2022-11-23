@@ -4,6 +4,8 @@ with pkgs; let
 
   inherit buildUBoot;
   inherit (callPackage ./imx-atf.nix { inherit buildArmTrustedFirmware; }) armTrustedFirmwareiMX8QM;
+  imx-firmware = callPackage ./imx-firmware.nix { inherit pkgs; };
+  imx-mkimage = buildPackages.callPackage ./imx-mkimage.nix { inherit pkgs; };
 
 in {
 
@@ -25,10 +27,10 @@ in {
       install -m 0644 $BL31 ./u-boot-atf.bin
     '';
     postBuild = ''
-      ${pkgs.buildPackages.imx-mkimage} -commit > head.hash
+      ${imx-mkimage} -commit > head.hash
       cat u-boot.bin head.hash > u-boot-hash.bin
       dd if=u-boot-hash.bin of=u-boot-atf.bin bs=1K seek=128
-      ${pkgs.buildPackages.imx-mkimage} -soc QM -rev B0 -append ahab-container.img -c -scfw mx8qm-mek-scfw-tcm.bin -ap u-boot-atf.bin a35 0x80000000 -out flash.bin
+      ${imx-mkimage} -soc QM -rev B0 -append ahab-container.img -c -scfw mx8qm-mek-scfw-tcm.bin -ap u-boot-atf.bin a35 0x80000000 -out flash.bin
     '';
     filesToInstall = [ "flash.bin" ];
   };

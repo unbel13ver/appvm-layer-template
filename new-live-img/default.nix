@@ -7,24 +7,28 @@ let
   inherit ( pkgs.callPackage ../bsp/imx8qm/imx-uboot.nix { inherit pkgs; }) ubootImx8;
   spectrum = import ../../spectrum/release/live { };
   kernel = pkgs.linux_latest;
+  linux_imx8 = pkgs.callPackage ../bsp/linux-imx8 { inherit pkgs; };
   appvm-user = pkgs.callPackage ../user-app-vm/default.nix { inherit config; };
+  imx-firmware = pkgs.callPackage ../bsp/imx8qm/imx-firmware.nix { inherit pkgs; };
 
   myextpart = with pkgs; vmTools.runInLinuxVM (
     stdenv.mkDerivation {
       name = "myextpart";
       nativeBuildInputs = [ e2fsprogs util-linux ];
       buildCommand = ''
-	ln -s ${kernel}/lib /lib
+        ln -s ${kernel}/lib /lib
         ${kmod}/bin/modprobe loop
         ${kmod}/bin/modprobe ext4
+
         cd /tmp/xchg
         install -m 0644 ${spectrum.EXT_FS} user-ext.ext4
-	spaceInMiB=$(du -sB M ${appvm-user} | awk '{ print substr( $1, 1, length($1)-1 ) }')
-	dd if=/dev/zero bs=1M count=$(expr $spaceInMiB + 50) >> user-ext.ext4
+        spaceInMiB=$(du -sB M ${appvm-user} | awk '{ print substr( $1, 1, length($1)-1 ) }')
+        dd if=/dev/zero bs=1M count=$(expr $spaceInMiB + 50) >> user-ext.ext4
         resize2fs -p user-ext.ext4
+
         tune2fs -O ^read-only user-ext.ext4
-	mkdir mp
-	mount -o loop,rw user-ext.ext4 mp
+        mkdir mp
+        mount -o loop,rw user-ext.ext4 mp
         mkdir -p mp/svc/data/appvm-external
         tar -C ${appvm-user} -c . | tar -C mp/svc/data/appvm-external -x
         umount mp
@@ -56,7 +60,7 @@ spectrum.overrideDerivation (oldAttrs: {
       .sectorsize * (.partitions[] | select(.type == ESP_GUID) | .start)
     ')
     mcopy -no -i $pname@@$ESP_OFFSET $KERNEL/dtbs/freescale/imx8qm-mek-hdmi.dtb ::/
-    mcopy -no -i $pname@@$ESP_OFFSET ${config.pkgs.imx-firmware}/hdmitxfw.bin ::/
+    mcopy -no -i $pname@@$ESP_OFFSET ${imx-firmware}/hdmitxfw.bin ::/
     mv $pname $out
     runHook postInstall
   '';
