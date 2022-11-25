@@ -6,7 +6,6 @@ let
   inherit (config) pkgs;
   inherit ( pkgs.callPackage ../bsp/imx8qm/imx-uboot.nix { inherit pkgs; }) ubootImx8;
   spectrum = import ../../spectrum/release/live { };
-  kernel = pkgs.linux_latest;
   linux_imx8 = pkgs.callPackage ../bsp/linux-imx8 { inherit pkgs; };
   appvm-user = pkgs.callPackage ../user-app-vm/default.nix { inherit config; };
   imx-firmware = pkgs.callPackage ../bsp/imx8qm/imx-firmware.nix { inherit pkgs; };
@@ -16,7 +15,6 @@ let
       name = "myextpart";
       nativeBuildInputs = [ e2fsprogs util-linux ];
       buildCommand = ''
-        ln -s ${kernel}/lib /lib
         ${kmod}/bin/modprobe loop
         ${kmod}/bin/modprobe ext4
 
